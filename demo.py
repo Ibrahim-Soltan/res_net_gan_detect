@@ -1,10 +1,36 @@
 import streamlit as st
 from PIL import Image
 import torch
+import torch.nn as nn
+import torchvision.models as models
 import torchvision.transforms as transforms
 
-# Load your trained PyTorch model
-model = torch.load('./epoch_6.pth', map_location=torch.device('cpu'))
+# Define the model architecture
+class Classifier(nn.Module):
+    def __init__(self):
+        super(Classifier, self).__init__()
+        # Load pre-trained ResNet50 model
+        self.resnet50 = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+
+        # Freeze the parameters (weights)
+        for param in self.resnet50.parameters():
+            param.requires_grad = True
+
+        # Modify the final layer for custom classification
+        num_ftrs_in = self.resnet50.fc.in_features  # Get the number of input features from the last layer
+        self.resnet50.fc = nn.Linear(num_ftrs_in, 1)  # Replace the fully connected layer
+        self.sigmoid = nn.Sigmoid()  # Define sigmoid activation as an attribute
+
+    def forward(self, x):
+        x = self.resnet50(x)
+        x = self.sigmoid(x)
+        return x
+
+# Initialize the model
+model = Classifier()
+
+# Load the trained model weights
+model.load_state_dict(torch.load('./epoch_6.pth', map_location=torch.device('cpu')))
 model.eval()
 
 # Define image transformations
@@ -16,7 +42,7 @@ transform = transforms.Compose([
 def predict(image):
     image = transform(image).unsqueeze(0)
     output = model(image)
-    _, predicted = torch.max(output, 1)
+    predicted = (output >= 0.5).float()  # Apply threshold to sigmoid output
     return 'GAN Generated' if predicted.item() == 1 else 'Not GAN Generated'
 
 st.title("GAN Detection Model")
