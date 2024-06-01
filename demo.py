@@ -10,7 +10,7 @@ class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
         # Load pre-trained ResNet50 model
-        self.resnet50 = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        self.resnet50 = models.resnet50(pretrained=False)
 
         # Freeze the parameters (weights)
         for param in self.resnet50.parameters():
